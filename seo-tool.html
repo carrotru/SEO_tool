@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>SEO 文章檢核工具</title>
+<style>
+    * { box-sizing: border-box; }
+    body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; background: #f0f4f8; padding: 20px; margin: 0; }
+    .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 14px; box-shadow: 0 6px 24px rgba(0,0,0,0.10); }
+    h2 { text-align: center; color: #1a2a40; margin-bottom: 6px; font-weight: 900; font-size: 1.6em; letter-spacing: 1px; }
+    .subtitle { text-align: center; color: #7a8fa6; font-size: 0.9em; margin-bottom: 28px; }
+
+    /* ===== 一鍵解析區 ===== */
+    .parse-section {
+        background: linear-gradient(135deg, #e8f0fe 0%, #f3e8ff 100%);
+        border: 2px dashed #7c6af0;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .parse-section h3 { margin: 0 0 6px 0; color: #4a3da8; font-size: 0.95em; white-space: nowrap; }
+    .parse-left { flex: 1; }
+    .parse-section textarea {
+        width: 100%; height: 90px; padding: 10px; border: 1px solid #c4b5fd;
+        border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical;
+        background: rgba(255,255,255,0.85); line-height: 1.5;
+    }
+    .parse-section textarea:focus { outline: none; border-color: #7c6af0; }
+    .btn-parse { 
+        margin-top: 26px; padding: 10px 20px; background: #7c6af0; color: #fff;
+        border: none; border-radius: 50px; font-size: 13px; font-weight: bold;
+        cursor: pointer; transition: all 0.2s; box-shadow: 0 3px 8px rgba(124,106,240,0.35);
+        white-space: nowrap;
+    }
+    .btn-parse:hover { background: #6251d6; transform: translateY(-1px); }
+
+    /* ===== 關鍵字欄位 ===== */
+    .keywords-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+    .keyword-box { display: flex; flex-direction: column; }
+    .keyword-box label {
+        font-weight: bold; margin-bottom: 7px; font-size: 13px; padding: 7px 10px;
+        border-radius: 6px; text-align: center; border: 1px solid rgba(0,0,0,0.12);
+    }
+    .kw-textarea {
+        width: 100%; height: 150px; padding: 10px; border: 1px solid #ced4da;
+        border-radius: 6px; font-size: 13px; font-family: inherit; resize: vertical; transition: border-color 0.2s;
+    }
+    .kw-textarea:focus { border-color: #7c6af0; outline: none; }
+
+    /* Word 正確醒目顏色 */
+    .label-1 { background: #ffff00; }   /* 亮黃 */
+    .label-2 { background: #00ffff; }   /* 亮藍(Cyan) */
+    .label-3 { background: #00ff00; }   /* 亮綠 */
+    .label-4 { background: #00ff00; }   /* 亮綠 */
+
+    /* ===== 文章輸入 ===== */
+    #articleInput {
+        width: 100%; height: 280px; padding: 14px; border: 1px solid #ced4da;
+        border-radius: 8px; font-size: 15px; font-family: inherit; resize: vertical;
+        line-height: 1.7; transition: border-color 0.2s;
+    }
+    #articleInput:focus { border-color: #7c6af0; outline: none; }
+
+    /* ===== 標題欄位 ===== */
+    .title-row {
+        display: flex; align-items: center; gap: 12px; margin-top: 16px; margin-bottom: 6px;
+    }
+    .title-row label { font-weight: bold; font-size: 14px; white-space: nowrap; color: #2c3e50; }
+    .title-row input {
+        flex: 1; padding: 9px 14px; border: 1px solid #ced4da; border-radius: 8px;
+        font-size: 14px; font-family: inherit; transition: border-color 0.2s;
+    }
+    .title-row input:focus { border-color: #7c6af0; outline: none; }
+
+    /* ===== 按鈕 ===== */
+    .btn-area { text-align: center; margin: 24px 0; display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
+    button { padding: 12px 32px; font-size: 15px; border: none; border-radius: 50px; cursor: pointer; transition: all 0.2s; font-weight: bold; }
+    .btn-run { background: #0066ff; color: #fff; box-shadow: 0 4px 12px rgba(0,102,255,0.3); }
+    .btn-run:hover { background: #0051cc; transform: translateY(-2px); }
+    .btn-download { background: #e74c3c; color: #fff; box-shadow: 0 4px 12px rgba(231,76,60,0.3); }
+    .btn-download:hover { background: #c0392b; transform: translateY(-2px); }
+
+    /* ===== 統計面板 ===== */
+    .stats-dashboard {
+        display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 14px; margin: 20px 0; background: #f8f9fa;
+        padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0;
+    }
+    .stat-card {
+        background: #fff; padding: 12px 10px; border-radius: 8px;
+        text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        border-top: 4px solid #ccc;
+    }
+    .stat-title { font-size: 12px; color: #666; margin-bottom: 6px; font-weight: bold; }
+    .stat-value { font-size: 20px; font-weight: bold; color: #333; }
+    .stat-percent { font-size: 12px; color: #888; margin-top: 3px; }
+    .stat-card.type-1 { border-top-color: #e6c700; }
+    .stat-card.type-2 { border-top-color: #5b9bd5; }
+    .stat-card.type-3 { border-top-color: #70ad47; }
+    .stat-card.type-4 { border-top-color: #70ad47; }
+
+    /* ===== 未使用字組警示 ===== */
+    .unused-section {
+        background: #fff8e1; border: 1px solid #ffc107; border-radius: 8px;
+        padding: 14px 18px; margin: 14px 0; display: none;
+    }
+    .unused-section h4 { margin: 0 0 10px 0; color: #856404; font-size: 13.5px; }
+    .unused-group { margin-bottom: 8px; }
+    .unused-group-title { font-size: 12px; font-weight: bold; color: #555; margin-bottom: 4px; }
+    .unused-tag {
+        display: inline-block; background: #ffe066; color: #5a4600;
+        border-radius: 4px; padding: 2px 9px; font-size: 12.5px; margin: 2px 3px;
+        border: 1px solid #e6c700;
+    }
+
+    /* ===== 結果區 ===== */
+    #resultArea {
+        min-height: 300px; border: 2px solid #e2e8f0; padding: 36px;
+        background: #fff; white-space: pre-wrap; line-height: 1.85;
+        font-size: 15.5px; border-radius: 10px;
+    }
+    
+    @media (max-width: 700px) {
+        .keywords-grid { grid-template-columns: 1fr 1fr; }
+        .stats-dashboard { grid-template-columns: 1fr 1fr; }
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>SEO 文章檢核工具</h2>
+    <div class="subtitle">支援一鍵解析字組 · 自動標色 · 未使用字組提醒 · 匯出 .docx</div>
+
+    <!-- ===== 一鍵解析區 ===== -->
+    <div class="parse-section">
+        <div class="parse-left">
+            <h3>✨ 一鍵貼上字組（自動解析分類）</h3>
+            <textarea id="rawKeywordInput" placeholder="把整份字組資料貼在這裡...（支援含「標題：」或最後一行直接是標題的格式）"></textarea>
+        </div>
+        <button class="btn-parse" onclick="parseKeywords()">🔍 自動解析<br>並填入</button>
+    </div>
+
+    <!-- ===== 關鍵字欄位 ===== -->
+    <div class="keywords-grid">
+        <div class="keyword-box">
+            <label class="label-1">1. 網頁標題字組（黃色）</label>
+            <textarea class="kw-textarea" id="kw1" placeholder="輸入關鍵字...&#10;每行一個"></textarea>
+        </div>
+        <div class="keyword-box">
+            <label class="label-2">2. 內文標題字組（藍色）</label>
+            <textarea class="kw-textarea" id="kw2" placeholder="輸入關鍵字...&#10;每行一個"></textarea>
+        </div>
+        <div class="keyword-box">
+            <label class="label-3">3. 內文字組 A（綠色）</label>
+            <textarea class="kw-textarea" id="kw3" placeholder="輸入關鍵字...&#10;每行一個"></textarea>
+        </div>
+        <div class="keyword-box">
+            <label class="label-3">4. 內文字組 B（綠色）</label>
+            <textarea class="kw-textarea" id="kw4" placeholder="輸入關鍵字...&#10;每行一個"></textarea>
+        </div>
+    </div>
+
+    <label style="font-weight:bold; display:block; margin-bottom:8px; font-size: 15px; color:#2c3e50;">📄 文章內容：</label>
+    <textarea id="articleInput" placeholder="請貼上完整文章（需包含【正文內容】與 * 標號行）..."></textarea>
+
+    <div class="title-row">
+        <label>📁 檔案標題：</label>
+        <input type="text" id="docTitle" placeholder="例如：全仁-膝蓋痛怎麼辦-20260515（系統自動加上 brook）" />
+    </div>
+
+    <div class="btn-area">
+        <button class="btn-run" onclick="processText()">⚡ 執行檢查與統計</button>
+        <button class="btn-download" onclick="exportToDocx()">💾 下載 .docx</button>
+    </div>
+
+    <!-- 統計面板 -->
+    <div id="statsDashboard" class="stats-dashboard" style="display:none;">
+        <div class="stat-card type-1">
+            <div class="stat-title">網頁標題字組</div>
+            <div class="stat-value" id="stat1">-</div>
+            <div class="stat-percent" id="perc1"></div>
+        </div>
+        <div class="stat-card type-2">
+            <div class="stat-title">內文標題字組</div>
+            <div class="stat-value" id="stat2">-</div>
+            <div class="stat-percent" id="perc2"></div>
+        </div>
+        <div class="stat-card type-3">
+            <div class="stat-title">內文字組 A</div>
+            <div class="stat-value" id="stat3">-</div>
+            <div class="stat-percent" id="perc3"></div>
+        </div>
+        <div class="stat-card type-4">
+            <div class="stat-title">內文字組 B</div>
+            <div class="stat-value" id="stat4">-</div>
+            <div class="stat-percent" id="perc4"></div>
+        </div>
+    </div>
+
+    <!-- 未使用字組警告 -->
+    <div id="unusedSection" class="unused-section">
+        <h4>⚠️ 以下字組尚未在文章中使用：</h4>
+        <div id="unusedContent"></div>
+    </div>
+
+    <div id="resultArea" contenteditable="true"></div>
+</div>
+
+<script>
+// ===== 顏色常數（Word 標準醒目顏色）=====
+const COLOR_YELLOW = '#ffff00';   // 亮黃
+const COLOR_BLUE   = '#00ffff';   // Cyan 亮藍
+const COLOR_GREEN  = '#00ff00';   // 亮綠
+
+// ===== 一鍵解析字組 =====
+function parseKeywords() {
+    const raw = document.getElementById('rawKeywordInput').value.trim();
+    if (!raw) { alert('請先貼上字組內容！'); return; }
+
+    const kw = { 1: [], 2: [], 3: [], 4: [] };
+    let currentGroup = 0;
+    let body3Done = false;
+    const allLines = raw.split('\n');
+
+    // 先找標題：支援「標題：XXX」或最後一行非空白、非分隔、非關鍵字區塊標題的純文字
+    let titleFound = false;
+    for (const line of allLines) {
+        const t = line.trim();
+        if (t.startsWith('標題：') || t.startsWith('標題:')) {
+            document.getElementById('docTitle').value = t.replace(/^標題[：:]/, '').trim();
+            titleFound = true;
+            break;
+        }
+    }
+    // 若沒有「標題：」前綴，找最後一行不含【的非空行作為標題
+    if (!titleFound) {
+        for (let i = allLines.length - 1; i >= 0; i--) {
+            const t = allLines[i].trim();
+            if (t && !t.includes('【') && !t.match(/^[-—-]{3,}$/)) {
+                document.getElementById('docTitle').value = t;
+                break;
+            }
+        }
+    }
+
+    // 找出應被跳過的「檔案標題行」內容（可能有前綴或無前綴）
+    const detectedTitle = document.getElementById('docTitle').value.trim();
+
+    allLines.forEach(rawLine => {
+        const line = rawLine.trim();
+        if (!line) return;
+        if (line.match(/^[-—-]{3,}$/)) return; // 分隔線
+        // 跳過「標題：XXX」格式
+        if (line.startsWith('標題：') || line.startsWith('標題:')) return;
+        // 跳過與已偵測到的檔案標題完全相同的行
+        if (detectedTitle && line === detectedTitle) return;
+
+        // 偵測區塊標題
+        if (/網頁標題/.test(line) && /【/.test(line)) { currentGroup = 1; return; }
+        if (/內文標題/.test(line) && /【/.test(line)) { currentGroup = 2; return; }
+        if (/內文/.test(line) && /全部使用/.test(line) && /【/.test(line)) { currentGroup = 4; return; }
+        if (/內文/.test(line) && /【/.test(line)) {
+            if (!body3Done) { currentGroup = 3; body3Done = true; }
+            else { currentGroup = 4; }
+            return;
+        }
+        // 跳過第一行（主題名稱，例如「膝蓋痛怎麼辦」，在任何區塊標題之前）
+        if (currentGroup === 0) return;
+
+        // 字組內容：長度合理、不含【
+        if (line.length > 0 && line.length <= 20 && !line.includes('【')) {
+            kw[currentGroup].push(line);
+        }
+    });
+
+    // 填入欄位（去除重複）
+    for (let i = 1; i <= 4; i++) {
+        const unique = [...new Set(kw[i])];
+        document.getElementById('kw' + i).value = unique.join('\n');
+    }
+
+    const title = document.getElementById('docTitle').value;
+    alert(`✅ 解析完成！\n網頁標題：${[...new Set(kw[1])].length} 個\n內文標題：${[...new Set(kw[2])].length} 個\n內文字組A：${[...new Set(kw[3])].length} 個\n內文字組B：${[...new Set(kw[4])].length} 個\n\n📁 檔案標題：${title || '（未偵測到）'}`);
+}
+
+// ===== 主要處理函式 =====
+function processText() {
+    const articleRaw = document.getElementById('articleInput').value;
+    if (!articleRaw) { alert('請先貼上文章！'); return; }
+
+    const splitMarker = '【正文內容】';
+
+    const groups = {
+        1: getKeywords('kw1', COLOR_YELLOW, 1),
+        2: getKeywords('kw2', COLOR_BLUE, 2),
+        3: getKeywords('kw3', COLOR_GREEN, 3),
+        4: getKeywords('kw4', COLOR_GREEN, 4)
+    };
+
+    let parts = articleRaw.split(splitMarker);
+    let headerRaw = parts[0] || '';
+    let bodyRaw = parts.length > 1 ? parts.slice(1).join(splitMarker) : '';
+
+    let statsText_Header = headerRaw;
+    let statsText_BodyTitles = '';
+    let statsText_BodyContent = '';
+
+    let processedHeader = applyHighlights(headerRaw, groups[1]);
+    let processedBody = '';
+
+    if (parts.length > 1) {
+        let lines = bodyRaw.split('\n');
+        lines.forEach(line => {
+            let t = line.trim();
+            if (t.startsWith('*') || t.startsWith('＊')) {
+                statsText_BodyTitles += line + '\n';
+            } else {
+                statsText_BodyContent += line + '\n';
+            }
+        });
+
+        let processedLines = lines.map(line => {
+            let t = line.trim();
+            if (t.startsWith('*') || t.startsWith('＊')) {
+                return applyHighlights(line, groups[2]);
+            } else {
+                // 普通內文：只用綠色（字組A + 字組B），不加藍色（藍色只給標題行）
+                let combined = [...groups[3], ...groups[4]];
+                return applyHighlights(line, combined, true);
+            }
+        });
+        processedBody = processedLines.join('\n');
+    }
+
+    // 統計 + 未使用
+    const unusedMap = {};
+    calculateStats(1, groups[1], statsText_Header, unusedMap);
+    calculateStats(2, groups[2], statsText_BodyTitles, unusedMap);
+    calculateStats(3, groups[3], statsText_BodyContent, unusedMap);
+    calculateStats(4, groups[4], statsText_BodyContent, unusedMap);
+
+    document.getElementById('statsDashboard').style.display = 'grid';
+
+    // 顯示未使用字組
+    showUnused(unusedMap, groups);
+
+    let finalHTML = processedHeader;
+    if (parts.length > 1) {
+        finalHTML += `<div style="margin:18px 0;font-weight:bold;font-size:16px;">${splitMarker}</div>` + processedBody;
+    }
+    document.getElementById('resultArea').innerHTML = finalHTML;
+}
+
+function showUnused(unusedMap, groups) {
+    const labels = { 1: '網頁標題字組', 2: '內文標題字組', 3: '內文字組 A', 4: '內文字組 B' };
+    let hasAny = false;
+    let html = '';
+
+    for (let i = 1; i <= 4; i++) {
+        const list = unusedMap[i] || [];
+        if (list.length > 0 && groups[i].length > 0) {
+            hasAny = true;
+            html += `<div class="unused-group">
+                <div class="unused-group-title">${labels[i]}（${list.length} 個未使用）：</div>
+                ${list.map(w => `<span class="unused-tag">${w}</span>`).join('')}
+            </div>`;
+        }
+    }
+
+    const sec = document.getElementById('unusedSection');
+    document.getElementById('unusedContent').innerHTML = html;
+    sec.style.display = hasAny ? 'block' : 'none';
+}
+
+function calculateStats(uiIndex, keywordList, targetText, unusedMap) {
+    unusedMap[uiIndex] = [];
+    if (!keywordList || keywordList.length === 0) {
+        updateStatUI(uiIndex, 0, 0); return;
+    }
+    let used = 0;
+    keywordList.forEach(item => {
+        if (targetText.toLowerCase().indexOf(item.word.toLowerCase()) !== -1) {
+            used++;
+        } else {
+            unusedMap[uiIndex].push(item.word);
+        }
+    });
+    updateStatUI(uiIndex, used, keywordList.length);
+}
+
+function updateStatUI(index, used, total) {
+    const statEl = document.getElementById('stat' + index);
+    const percEl = document.getElementById('perc' + index);
+    statEl.innerText = `${used} / ${total}`;
+    if (total > 0) {
+        let pct = Math.round((used / total) * 100);
+        percEl.innerText = `使用率：${pct}%`;
+        statEl.style.color = pct === 100 ? '#28a745' : (pct >= 70 ? '#e67e22' : '#e74c3c');
+    } else {
+        percEl.innerText = '—';
+    }
+}
+
+function getKeywords(elementId, colorCode, groupIdx) {
+    const text = document.getElementById(elementId).value;
+    const raw = text.split(/[\n,，、]+/).map(w => w.trim()).filter(w => w.length > 0);
+    return [...new Set(raw)].map(w => ({ word: w, color: colorCode, length: w.length, group: groupIdx }));
+}
+
+function applyHighlights(text, keywordsList, preferBodyMode = false) {
+    if (!text) return '';
+    if (!keywordsList || keywordsList.length === 0) return escapeHtml(text);
+
+    // 長字優先排序，避免短字先被替換後干擾長字
+    const sorted = [...keywordsList].sort((a, b) => b.length - a.length);
+
+    // 在原始文字上找所有命中位置（不區分大小寫），記錄 [start, end, color, word]
+    const lowerText = text.toLowerCase();
+    const hits = []; // { start, end, color, word }
+
+    sorted.forEach(item => {
+        const lowerWord = item.word.toLowerCase();
+        let pos = 0;
+        while (true) {
+            const idx = lowerText.indexOf(lowerWord, pos);
+            if (idx === -1) break;
+            const end = idx + item.word.length;
+            // 檢查是否與已有命中重疊，重疊則跳過（先到先得）
+            const overlap = hits.some(h => idx < h.end && end > h.start);
+            if (!overlap) {
+                hits.push({ start: idx, end, color: item.color, word: text.slice(idx, end) });
+            }
+            pos = idx + 1;
+        }
+    });
+
+    if (hits.length === 0) return escapeHtml(text);
+
+    // 依位置排序後組合輸出
+    hits.sort((a, b) => a.start - b.start);
+    let result = '';
+    let cursor = 0;
+    hits.forEach(h => {
+        result += escapeHtml(text.slice(cursor, h.start));
+        result += `<span style="background-color:${h.color};">${escapeHtml(h.word)}</span>`;
+        cursor = h.end;
+    });
+    result += escapeHtml(text.slice(cursor));
+    return result;
+}
+
+// ===== DOCX 匯出（純 XML + JSZip，不依賴外部 docx 函式庫）=====
+async function exportToDocx() {
+    const contentEl = document.getElementById('resultArea');
+    const rawText = contentEl.innerText.trim();
+    if (!rawText) { alert('請先執行檢查！'); return; }
+
+    let titleInput = document.getElementById('docTitle').value.trim();
+    if (!titleInput) { alert('請填入檔案標題！'); return; }
+    const fileName = titleInput + '(brook).docx';
+
+    // 動態載入 JSZip
+    if (typeof JSZip === 'undefined') {
+        await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+    }
+
+    try {
+        const docXml = buildDocumentXml(contentEl);
+        const zip = new JSZip();
+
+        // [Content_Types].xml
+        zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`);
+
+        // _rels/.rels
+        zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+
+        // word/_rels/document.xml.rels
+        zip.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`);
+
+        // word/styles.xml
+        zip.file('word/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault><w:rPr>
+      <w:rFonts w:ascii="Microsoft JhengHei" w:hAnsi="Microsoft JhengHei" w:cs="Microsoft JhengHei"/>
+      <w:sz w:val="24"/><w:szCs w:val="24"/>
+    </w:rPr></w:rPrDefault>
+  </w:docDefaults>
+</w:styles>`);
+
+        // word/document.xml
+        zip.file('word/document.xml', docXml);
+
+        const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch(e) {
+        console.error(e);
+        alert('匯出失敗：' + e.message);
+    }
+}
+
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+    });
+}
+
+// 將 resultArea 的 HTML 轉換為 Word XML 段落
+function buildDocumentXml(container) {
+    const paragraphs = [];
+    const html = container.innerHTML;
+    const lines = html.split('\n');
+
+    lines.forEach(line => {
+        const runs = lineHtmlToWordRuns(line);
+        const runsXml = runs.join('');
+        // 行距 1.0（240），段前後空間設為 0
+        paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>${runsXml}</w:p>`);
+    });
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:body>
+${paragraphs.join('\n')}
+<w:sectPr>
+  <w:pgSz w:w="11906" w:h="16838"/>
+  <w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/>
+</w:sectPr>
+</w:body>
+</w:document>`;
+}
+
+// 顏色 → Word w:highlight 名稱對照
+const HIGHLIGHT_MAP = {
+    'ffff00': 'yellow',
+    '00ffff': 'cyan',
+    '00ff00': 'green',
+    'ff0000': 'red',
+    'ff00ff': 'magenta',
+    '0000ff': 'blue',
+    'ffa500': 'darkYellow',
+};
+
+function lineHtmlToWordRuns(htmlLine) {
+    const runs = [];
+    // 用 DOM 解析，完全不用 regex 替換，避免 __BOLD__ 殘留
+    const temp = document.createElement('div');
+    temp.innerHTML = htmlLine;
+
+    function walkNode(node, isBold) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            const t = xmlEscape(node.textContent);
+            if (!t) return;
+            const boldTag = isBold ? '<w:b/><w:bCs/>' : '';
+            runs.push(`<w:r><w:rPr><w:rFonts w:ascii="Microsoft JhengHei" w:hAnsi="Microsoft JhengHei" w:cs="Microsoft JhengHei" w:eastAsia="Microsoft JhengHei"/>${boldTag}</w:rPr><w:t xml:space="preserve">${t}</w:t></w:r>`);
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const tag = node.tagName.toLowerCase();
+            // <div> / <b> / <strong> 傳遞粗體狀態，不直接輸出
+            if (tag === 'div' || tag === 'b' || tag === 'strong') {
+                const styleAttr = node.getAttribute('style') || '';
+                const childBold = isBold || tag === 'b' || tag === 'strong' || /font-weight\s*:\s*bold/i.test(styleAttr);
+                node.childNodes.forEach(child => walkNode(child, childBold));
+            } else if (tag === 'span') {
+                const style = node.getAttribute('style') || '';
+                const bgMatch = style.match(/background-color:\s*([^;]+)/i);
+                const bgColor = bgMatch ? bgMatch[1].trim() : null;
+                const hex = bgColor ? colorToHex6(bgColor) : null;
+                const highlightName = hex ? (HIGHLIGHT_MAP[hex.toLowerCase()] || null) : null;
+                const text = xmlEscape(node.textContent);
+                if (!text) return;
+                let highlightXml = '';
+                if (highlightName) {
+                    highlightXml = `<w:highlight w:val="${highlightName}"/>`;
+                } else if (hex) {
+                    highlightXml = `<w:shd w:val="clear" w:color="auto" w:fill="${hex.toUpperCase()}"/>`;
+                }
+                const boldTag = isBold ? '<w:b/><w:bCs/>' : '';
+                runs.push(`<w:r><w:rPr><w:rFonts w:ascii="Microsoft JhengHei" w:hAnsi="Microsoft JhengHei" w:cs="Microsoft JhengHei" w:eastAsia="Microsoft JhengHei"/>${boldTag}${highlightXml}</w:rPr><w:t xml:space="preserve">${text}</w:t></w:r>`);
+            } else if (tag === 'br') {
+                // 忽略 br（換行已由外層 split('\n') 處理）
+            } else {
+                node.childNodes.forEach(child => walkNode(child, isBold));
+            }
+        }
+    }
+
+    temp.childNodes.forEach(n => walkNode(n, false));
+    return runs;
+}
+
+function colorToHex6(color) {
+    if (!color) return null;
+    color = color.trim();
+    if (color.startsWith('#')) {
+        const h = color.slice(1);
+        return h.length === 3 ? h.split('').map(c => c+c).join('') : h;
+    }
+    const m = color.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+    if (m) return [m[1],m[2],m[3]].map(n => parseInt(n).toString(16).padStart(2,'0')).join('');
+    const named = { yellow:'ffff00', cyan:'00ffff', aqua:'00ffff', lime:'00ff00', green:'008000', red:'ff0000', blue:'0000ff', magenta:'ff00ff', white:'ffffff', black:'000000' };
+    return named[color.toLowerCase()] || null;
+}
+
+function xmlEscape(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escapeHtml(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+</script>
+</body>
+</html>
