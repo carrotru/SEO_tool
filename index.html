@@ -289,8 +289,11 @@ function parseKeywords() {
 
 // ===== 主要處理函式 =====
 function processText() {
-    const articleRaw = document.getElementById('articleInput').value;
+    let articleRaw = document.getElementById('articleInput').value;
     if (!articleRaw) { alert('請先貼上文章！'); return; }
+
+    // 把被跳脫的 \* 或 \＊ 還原成 * / ＊（開頭或句中都處理）
+    articleRaw = articleRaw.replace(/\\([*＊])/g, '$1');
 
     const splitMarker = '【正文內容】';
 
