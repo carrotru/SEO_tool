@@ -78,10 +78,39 @@
     /* ===== 按鈕 ===== */
     .btn-area { text-align: center; margin: 24px 0; display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
     button { padding: 12px 32px; font-size: 15px; border: none; border-radius: 50px; cursor: pointer; transition: all 0.2s; font-weight: bold; }
+    .btn-prompt { background: #8e44ad; color: #fff; box-shadow: 0 4px 12px rgba(142,68,173,0.3); }
+    .btn-prompt:hover { background: #73368c; transform: translateY(-2px); }
     .btn-run { background: #0066ff; color: #fff; box-shadow: 0 4px 12px rgba(0,102,255,0.3); }
     .btn-run:hover { background: #0051cc; transform: translateY(-2px); }
+    .btn-score { background: #f39c12; color: #fff; box-shadow: 0 4px 12px rgba(243,156,18,0.3); }
+    .btn-score:hover { background: #d68910; transform: translateY(-2px); }
     .btn-download { background: #e74c3c; color: #fff; box-shadow: 0 4px 12px rgba(231,76,60,0.3); }
     .btn-download:hover { background: #c0392b; transform: translateY(-2px); }
+
+    /* 小型複製按鈕 */
+    .btn-copy {
+        padding: 5px 14px; font-size: 12.5px; border-radius: 50px;
+        background: #fff; color: #856404; border: 1px solid #e0a800;
+        box-shadow: none; white-space: nowrap;
+    }
+    .btn-copy:hover { background: #ffe066; }
+    .btn-copy.copied { background: #28a745; color: #fff; border-color: #28a745; }
+
+    /* ===== 生成指令區 ===== */
+    .prompt-section {
+        display: none; background: #f8f3fc; border: 1px solid #c39bd3;
+        border-radius: 10px; padding: 14px 18px; margin: 0 0 20px 0;
+    }
+    .prompt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; }
+    .prompt-header h4 { margin: 0; color: #6c3483; font-size: 14px; }
+    .prompt-section .btn-copy { color: #6c3483; border-color: #8e44ad; }
+    .prompt-section .btn-copy:hover { background: #e8daef; }
+    .prompt-section .btn-copy.copied { background: #28a745; color: #fff; border-color: #28a745; }
+    #promptOutput {
+        width: 100%; height: 260px; padding: 12px; border: 1px solid #d2b4de;
+        border-radius: 8px; font-size: 13px; font-family: inherit; line-height: 1.6;
+        resize: vertical; background: #fff;
+    }
 
     /* ===== 統計面板 ===== */
     .stats-dashboard {
@@ -107,7 +136,8 @@
         background: #fff8e1; border: 1px solid #ffc107; border-radius: 8px;
         padding: 14px 18px; margin: 14px 0; display: none;
     }
-    .unused-section h4 { margin: 0 0 10px 0; color: #856404; font-size: 13.5px; }
+    .unused-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .unused-section h4 { margin: 0; color: #856404; font-size: 13.5px; }
     .unused-group { margin-bottom: 8px; }
     .unused-group-title { font-size: 12px; font-weight: bold; color: #555; margin-bottom: 4px; }
     .unused-tag {
@@ -133,7 +163,16 @@
 
 <div class="container">
     <h2>SEO 文章檢核工具</h2>
-    <div class="subtitle">支援一鍵解析字組 · 自動標色 · 未使用字組提醒 · 匯出 .docx</div>
+    <div class="subtitle">支援一鍵解析字組 · 自動標色 · 未使用字組提醒 · 生成分析指令 · 匯出 .docx</div>
+
+    <!-- 未使用字組警告（最上面）-->
+    <div id="unusedSection" class="unused-section">
+        <div class="unused-header">
+            <h4>⚠️ 以下字組尚未在文章中使用：</h4>
+            <button class="btn-copy" id="btnCopyUnused" onclick="copyUnused()">📋 複製</button>
+        </div>
+        <div id="unusedContent"></div>
+    </div>
 
     <!-- ===== 一鍵解析區 ===== -->
     <div class="parse-section">
@@ -172,11 +211,6 @@
         <input type="text" id="docTitle" placeholder="例如：全仁-膝蓋痛怎麼辦-20260515（系統自動加上 brook）" />
     </div>
 
-    <div class="btn-area">
-        <button class="btn-run" onclick="processText()">⚡ 執行檢查與統計</button>
-        <button class="btn-download" onclick="exportToDocx()">💾 下載 .docx</button>
-    </div>
-
     <!-- 統計面板 -->
     <div id="statsDashboard" class="stats-dashboard" style="display:none;">
         <div class="stat-card type-1">
@@ -201,13 +235,24 @@
         </div>
     </div>
 
-    <!-- 未使用字組警告 -->
-    <div id="unusedSection" class="unused-section">
-        <h4>⚠️ 以下字組尚未在文章中使用：</h4>
-        <div id="unusedContent"></div>
+    <div id="resultArea" contenteditable="true"></div>
+
+    <!-- ===== 按鈕（最底端）===== -->
+    <div class="btn-area">
+        <button class="btn-prompt" onclick="generatePrompt()">📋 生成指令</button>
+        <button class="btn-run" onclick="processText()">⚡ 執行檢查與統計</button>
+        <button class="btn-score" onclick="generateScorePrompt()">🏅 文章評分</button>
+        <button class="btn-download" onclick="exportToDocx()">💾 下載 .docx</button>
     </div>
 
-    <div id="resultArea" contenteditable="true"></div>
+    <!-- 生成指令／評分指令輸出 -->
+    <div id="promptSection" class="prompt-section">
+        <div class="prompt-header">
+            <h4 id="promptTitle">📋 優化指令（已自動複製，可直接貼到其他地方）</h4>
+            <button class="btn-copy" id="btnCopyPrompt" onclick="copyPrompt()">📋 複製指令</button>
+        </div>
+        <textarea id="promptOutput"></textarea>
+    </div>
 </div>
 
 <script>
@@ -216,10 +261,15 @@ const COLOR_YELLOW = '#ffff00';   // 亮黃
 const COLOR_BLUE   = '#00ffff';   // Cyan 亮藍
 const COLOR_GREEN  = '#00ff00';   // 亮綠
 
+const GROUP_LABELS = { 1: '網頁標題字組', 2: '內文標題字組', 3: '內文字組 A', 4: '內文字組 B' };
+
+// 最近一次檢查的未使用字組（給複製按鈕用）
+let lastUnusedText = '';
+
 // ===== 一鍵解析字組 =====
-function parseKeywords() {
+function parseKeywords(silent = false) {
     const raw = document.getElementById('rawKeywordInput').value.trim();
-    if (!raw) { alert('請先貼上字組內容！'); return; }
+    if (!raw) { if (!silent) alert('請先貼上字組內容！'); return false; }
 
     const kw = { 1: [], 2: [], 3: [], 4: [] };
     let currentGroup = 0;
@@ -283,8 +333,70 @@ function parseKeywords() {
         document.getElementById('kw' + i).value = unique.join('\n');
     }
 
-    const title = document.getElementById('docTitle').value;
-    alert(`✅ 解析完成！\n網頁標題：${[...new Set(kw[1])].length} 個\n內文標題：${[...new Set(kw[2])].length} 個\n內文字組A：${[...new Set(kw[3])].length} 個\n內文字組B：${[...new Set(kw[4])].length} 個\n\n📁 檔案標題：${title || '（未偵測到）'}`);
+    if (!silent) {
+        const title = document.getElementById('docTitle').value;
+        alert(`✅ 解析完成！\n網頁標題：${[...new Set(kw[1])].length} 個\n內文標題：${[...new Set(kw[2])].length} 個\n內文字組A：${[...new Set(kw[3])].length} 個\n內文字組B：${[...new Set(kw[4])].length} 個\n\n📁 檔案標題：${title || '（未偵測到）'}`);
+    }
+    return true;
+}
+
+// ===== 共用：取得四組字組 =====
+function getAllGroups() {
+    return {
+        1: getKeywords('kw1', COLOR_YELLOW, 1),
+        2: getKeywords('kw2', COLOR_BLUE, 2),
+        3: getKeywords('kw3', COLOR_GREEN, 3),
+        4: getKeywords('kw4', COLOR_GREEN, 4)
+    };
+}
+
+// ===== 共用：把文章拆成 標題區 / 內文小標 / 內文段落 =====
+function splitArticle(articleRaw) {
+    const splitMarker = '【正文內容】';
+    const parts = articleRaw.split(splitMarker);
+    const headerRaw = parts[0] || '';
+    const bodyRaw = parts.length > 1 ? parts.slice(1).join(splitMarker) : '';
+    let titles = '';
+    let content = '';
+    if (parts.length > 1) {
+        bodyRaw.split('\n').forEach(line => {
+            const t = line.trim();
+            if (t.startsWith('*') || t.startsWith('＊')) titles += line + '\n';
+            else content += line + '\n';
+        });
+    }
+    return { splitMarker, hasBody: parts.length > 1, headerRaw, bodyRaw, titles, content };
+}
+
+// ===== 共用：計算各組使用狀況（不動 UI）=====
+function computeUsage(groups, sp) {
+    const targets = { 1: sp.headerRaw, 2: sp.titles, 3: sp.content, 4: sp.content };
+    const result = {};
+    for (let i = 1; i <= 4; i++) {
+        const text = targets[i].toLowerCase();
+        const unused = [];
+        let used = 0;
+        groups[i].forEach(item => {
+            if (text.indexOf(item.word.toLowerCase()) !== -1) used++;
+            else unused.push(item.word);
+        });
+        result[i] = { used, total: groups[i].length, unused };
+    }
+    return result;
+}
+
+// ===== 共用：產生「未使用字組」純文字 =====
+function buildUnusedText(unusedMap, groups) {
+    let lines = [];
+    for (let i = 1; i <= 4; i++) {
+        const list = unusedMap[i] || [];
+        if (list.length > 0 && groups[i].length > 0) {
+            lines.push(`${GROUP_LABELS[i]}（${list.length}個未使用）：`);
+            lines.push(list.join('、'));
+        }
+    }
+    if (lines.length === 0) return '';
+    return '⚠️ 以下字組尚未在文章中使用：\n' + lines.join('\n');
 }
 
 // ===== 主要處理函式 =====
@@ -295,37 +407,14 @@ function processText() {
     // 把被跳脫的 \* 或 \＊ 還原成 * / ＊（開頭或句中都處理）
     articleRaw = articleRaw.replace(/\\([*＊])/g, '$1');
 
-    const splitMarker = '【正文內容】';
+    const groups = getAllGroups();
+    const sp = splitArticle(articleRaw);
 
-    const groups = {
-        1: getKeywords('kw1', COLOR_YELLOW, 1),
-        2: getKeywords('kw2', COLOR_BLUE, 2),
-        3: getKeywords('kw3', COLOR_GREEN, 3),
-        4: getKeywords('kw4', COLOR_GREEN, 4)
-    };
-
-    let parts = articleRaw.split(splitMarker);
-    let headerRaw = parts[0] || '';
-    let bodyRaw = parts.length > 1 ? parts.slice(1).join(splitMarker) : '';
-
-    let statsText_Header = headerRaw;
-    let statsText_BodyTitles = '';
-    let statsText_BodyContent = '';
-
-    let processedHeader = applyHighlights(headerRaw, groups[1]);
+    let processedHeader = applyHighlights(sp.headerRaw, groups[1]);
     let processedBody = '';
 
-    if (parts.length > 1) {
-        let lines = bodyRaw.split('\n');
-        lines.forEach(line => {
-            let t = line.trim();
-            if (t.startsWith('*') || t.startsWith('＊')) {
-                statsText_BodyTitles += line + '\n';
-            } else {
-                statsText_BodyContent += line + '\n';
-            }
-        });
-
+    if (sp.hasBody) {
+        let lines = sp.bodyRaw.split('\n');
         let processedLines = lines.map(line => {
             let t = line.trim();
             if (t.startsWith('*') || t.startsWith('＊')) {
@@ -340,11 +429,12 @@ function processText() {
     }
 
     // 統計 + 未使用
+    const usage = computeUsage(groups, sp);
     const unusedMap = {};
-    calculateStats(1, groups[1], statsText_Header, unusedMap);
-    calculateStats(2, groups[2], statsText_BodyTitles, unusedMap);
-    calculateStats(3, groups[3], statsText_BodyContent, unusedMap);
-    calculateStats(4, groups[4], statsText_BodyContent, unusedMap);
+    for (let i = 1; i <= 4; i++) {
+        unusedMap[i] = usage[i].unused;
+        updateStatUI(i, usage[i].used, usage[i].total);
+    }
 
     document.getElementById('statsDashboard').style.display = 'grid';
 
@@ -352,14 +442,13 @@ function processText() {
     showUnused(unusedMap, groups);
 
     let finalHTML = processedHeader;
-    if (parts.length > 1) {
-        finalHTML += `<div style="margin:18px 0;font-weight:bold;font-size:16px;">${splitMarker}</div>` + processedBody;
+    if (sp.hasBody) {
+        finalHTML += `<div style="margin:18px 0;font-weight:bold;font-size:16px;">${sp.splitMarker}</div>` + processedBody;
     }
     document.getElementById('resultArea').innerHTML = finalHTML;
 }
 
 function showUnused(unusedMap, groups) {
-    const labels = { 1: '網頁標題字組', 2: '內文標題字組', 3: '內文字組 A', 4: '內文字組 B' };
     let hasAny = false;
     let html = '';
 
@@ -368,31 +457,330 @@ function showUnused(unusedMap, groups) {
         if (list.length > 0 && groups[i].length > 0) {
             hasAny = true;
             html += `<div class="unused-group">
-                <div class="unused-group-title">${labels[i]}（${list.length} 個未使用）：</div>
-                ${list.map(w => `<span class="unused-tag">${w}</span>`).join('')}
+                <div class="unused-group-title">${GROUP_LABELS[i]}（${list.length} 個未使用）：</div>
+                ${list.map(w => `<span class="unused-tag">${escapeHtml(w)}</span>`).join('')}
             </div>`;
         }
     }
 
+    lastUnusedText = buildUnusedText(unusedMap, groups);
+
     const sec = document.getElementById('unusedSection');
     document.getElementById('unusedContent').innerHTML = html;
     sec.style.display = hasAny ? 'block' : 'none';
+    // 未使用字組在最上面，有缺漏時自動捲上去
+    if (hasAny) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function calculateStats(uiIndex, keywordList, targetText, unusedMap) {
-    unusedMap[uiIndex] = [];
-    if (!keywordList || keywordList.length === 0) {
-        updateStatUI(uiIndex, 0, 0); return;
+// ===== 複製未使用字組 =====
+function copyUnused() {
+    if (!lastUnusedText) { alert('目前沒有未使用的字組！'); return; }
+    copyToClipboard(lastUnusedText, document.getElementById('btnCopyUnused'));
+}
+
+// ===== 生成分析指令 =====
+function generatePrompt() {
+    let articleRaw = document.getElementById('articleInput').value;
+    if (!articleRaw.trim()) { alert('請先貼上文章！'); return; }
+    articleRaw = articleRaw.replace(/\\([*＊])/g, '$1').trim();
+
+    let groups = getAllGroups();
+    const noKw = [1, 2, 3, 4].every(i => groups[i].length === 0);
+    // 字組欄位還是空的，但一鍵貼上區有內容 → 自動解析
+    if (noKw) {
+        if (parseKeywords(true)) groups = getAllGroups();
     }
-    let used = 0;
-    keywordList.forEach(item => {
-        if (targetText.toLowerCase().indexOf(item.word.toLowerCase()) !== -1) {
-            used++;
-        } else {
-            unusedMap[uiIndex].push(item.word);
-        }
-    });
-    updateStatUI(uiIndex, used, keywordList.length);
+    if ([1, 2, 3, 4].every(i => groups[i].length === 0)) {
+        alert('請先貼上字組（或填入字組欄位）！');
+        return;
+    }
+
+    const title = document.getElementById('docTitle').value.trim();
+    const topic = extractTopic(document.getElementById('rawKeywordInput').value, title) || '（請填入文章主題）';
+    const list = i => groups[i].length ? groups[i].map(g => g.word).join('\n') : '（無）';
+
+    const prompt =
+`請根據以下指定字組與原始文章，進行 SEO 文章優化。
+
+你的任務是「潤飾原文」，不是重新創作一篇新文章。請盡量保留原始文章的架構、段落順序、內容資訊及原有表達方式，只針對必要的地方進行修改。
+
+【文章主題】
+
+${topic}
+
+【網頁標題字組：8 個標題，每個至少使用 3 組以上】
+
+${list(1)}
+
+【內文標題字組：至少 5 個標題，合計使用 6 組以上】
+
+${list(2)}
+
+【內文字組：使用 6 組以上】
+
+${list(3)}
+
+【內文字組：全部使用】
+
+${list(4)}
+
+【文章識別名稱】
+
+${title || '（請填入文章名稱或檔案名稱）'}
+
+【以下是文章】
+
+${articleRaw}
+
+---
+
+## 一、最重要的原則：以原文潤飾為主
+
+1. **保留原始文章架構。** 原文有幾個主要段落，原則上就保留幾個主要段落。不得為了增加內容或讓文章看起來更完整，就任意新增章節、次標題或大幅調整段落順序。
+
+2. **保留原始內容。** 原文的重點、論述方向、資訊及有價值的句子應盡量保留。只有在語句不通、邏輯不順、內容重複或需要補足指定字組時，才進行必要修改。
+
+3. **禁止大幅擴寫。** 不得擅自增加大量新資訊、新觀點、條列清單、問答區塊或額外的次標題。除非原文確實缺少回答文章主題所需的關鍵資訊，否則不要自行擴充內容。
+
+4. **控制改寫幅度。** 優先調整原句的用詞、語序、標點與句子長度。能透過小幅修改解決的問題，就不要整段重寫；能保留的原句就保留，不要為了追求不同的表達方式而改掉原文。
+
+5. **不要刻意湊字數。** 文章長度以原文為基準，只做必要的增減。不要為了塞入關鍵字而重複解釋相同觀念，也不要將一句話拆成多句來增加篇幅。
+
+## 二、指定字組規則
+
+1. 網頁標題固定產出 8 個，每個標題至少使用 3 組指定字組。
+2. 內文標題至少 5 個，並符合指定的字組數量要求。
+3. 內文字組若要求使用一定組數，必須達到最低數量。
+4. 內文字組若要求全部使用，必須逐一確認，不得遺漏。
+5. 指定字組必須自然融入句子，不能只是把關鍵字直接串接在一起。
+6. 不要為了使用字組而大幅改寫原文，也不要在同一段落密集重複相同關鍵字。
+7. 產出前自行檢查所有字組是否達標，不需另外輸出查核報告。
+
+## 三、語句潤飾規則
+
+1. 使用自然、流暢的台灣繁體中文。
+2. 修正明顯不通順、不自然、語意重複或前後邏輯不一致的句子。
+3. 遇到過長句子時，優先調整標點或拆句，但必須保留原本的意思及資訊。
+4. 避免過度制式化的 AI 語氣、空泛結尾及同義反覆。
+5. 不要刻意將原文改寫成另一種文風，也不要為了讓文字看起來更專業而加入不必要的術語。
+6. 不得為了提高 SEO 字組覆蓋率而犧牲閱讀流暢度。
+
+## 四、標題與內容一致性
+
+1. 所有標題都必須與其下方的正文相符。
+2. 不可出現標題討論某個主題，正文卻轉向完全無關的內容。
+3. 原文標題若能使用，只需微調，不要任意更換成全新的標題。
+4. 如果原文缺少必要的主標題，可以補上；除此之外，不要任意增加標題層級。
+5. 每個標題下方都必須有正文，不可連續出現兩個標題。
+
+## 五、內容正確性
+
+1. 不得捏造研究、統計數據、成功案例、醫療效果或其他事實。
+2. 不得擅自加入原文沒有依據的療效保證或誇大宣稱。
+3. 若原文涉及醫療、健康或專業議題，應保留必要的風險提醒。
+4. 若原文有明顯錯誤，應以正確性為優先進行必要修正，但不要藉此大幅改寫整篇文章。
+
+## 六、固定輸出格式
+
+網頁標題【8個 每個3組以上】
+
+1. 網頁標題
+2. 網頁標題
+3. 網頁標題
+4. 網頁標題
+5. 網頁標題
+6. 網頁標題
+7. 網頁標題
+8. 網頁標題
+
+【正文內容】
+
+\\*原始文章主標題
+
+潤飾後的正文內容。
+
+\\*原始正文標題
+
+潤飾後的正文內容。
+
+依照原始文章的段落順序，完成整篇文章。
+
+格式注意事項：
+
+- 保留原文的標題格式，使用 \`*標題\`，不要擅自改成 \`#\`、\`##\` 或 \`###\`。
+- 原文有幾個主要章節，原則上就保留幾個主要章節。
+- 不要自行增加大量次標題。
+- 每個標題下方都必須先有正文，再接下一個標題。
+- 不要輸出修改說明、字組查核表、評分或其他額外內容。
+
+## 七、後續修改規則
+
+1. 如果我指出字組缺漏、語句不順或其他問題，必須重新輸出完整文章，不可只提供修改部分。
+2. 修改時仍須遵守「以原文潤飾為主」的原則，不得因為局部修改而重新改寫整篇文章。
+3. 如果我詢問標題與內容是否相符，只需粗略回答有或沒有，不必進行細部分析。
+4. 如果我對文章表示滿意，只回覆「收到」。
+
+**最終原則：保留原文、必要才改、不可任意擴寫、字組必須達標、格式必須一致。**`;
+
+    showPrompt(prompt, '📋 優化指令（已自動複製，可直接貼到其他地方）');
+}
+
+// ===== 顯示指令並自動複製 =====
+function showPrompt(text, heading) {
+    document.getElementById('promptTitle').innerText = heading;
+    document.getElementById('promptOutput').value = text;
+    const sec = document.getElementById('promptSection');
+    sec.style.display = 'block';
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    copyToClipboard(text, document.getElementById('btnCopyPrompt'));
+}
+
+// ===== 文章評分指令 =====
+function generateScorePrompt() {
+    let articleRaw = document.getElementById('articleInput').value;
+    if (!articleRaw.trim()) { alert('請先貼上文章！'); return; }
+    articleRaw = articleRaw.replace(/\\([*＊])/g, '$1').trim();
+
+    let groups = getAllGroups();
+    if ([1, 2, 3, 4].every(i => groups[i].length === 0)) {
+        if (parseKeywords(true)) groups = getAllGroups();
+    }
+    if ([1, 2, 3, 4].every(i => groups[i].length === 0)) {
+        alert('請先貼上字組（或填入字組欄位）！');
+        return;
+    }
+
+    const list = i => groups[i].length ? groups[i].map(g => g.word).join('\n') : '（無）';
+
+    const prompt =
+`請擔任專業的 SEO 內容主審，對比「指定關鍵字組清單」嚴格評估產出的文章。採 100 分制，及格門檻為 80 分。禁止客套話與空泛讚美，扣分必須提供「扣分原因」與「原文節錄」。
+
+---
+
+【評分標準（總計 100 分）】
+
+1. 指定字組覆蓋率與執行度（佔 30 分）
+- 基準：嚴格落實各區塊的字組使用規定（包括「每個 X 組以上」、「全部使用」或「使用 X 組以上」等數量條件）。
+- 扣分規則：
+* 「內文全部使用」字組若有缺漏：每缺 1 個詞扣 2 分。
+* 「網頁標題」或「內文標題」未達規定組數門檻：扣 5-10 分。
+* 「內文使用 X 組以上」未達指定最低數量：扣 5-10 分。
+
+2. 關鍵字自然度與反作弊（佔 25 分）
+- 基準：指定的字組必須自然融入語意與句子，符合中文文法，無機械式拼接痕跡。
+- 扣分規則：
+* 為了湊指定字組而語法不通、無標點硬塞或拼貼：每次扣 5 分。
+* 單一關鍵字在連續 100 字內無意義密集重複 > 3 次：每次扣 5 分。
+* 出現公式化、無意義重複的 3-gram（三詞模板組合）：扣 5 分。
+
+3. 語句長度與可讀性（佔 25 分）
+- 基準：語句結構完整，標點符號運用恰當，閱讀節奏流暢易讀。
+- 扣分規則：
+* 單句超過 45 字且未以標點符號適當斷句（超長句）：每一處扣 3 分。
+* 語意破碎、前後句缺乏邏輯銜接詞：每一處扣 3 分。
+* 單一段落超過 5 行純文字未分段：扣 2 分。
+
+4. 實質價值與資訊增益（佔 20 分）
+- 基準：切中搜尋意圖，結構層次清楚，提供實質資訊而非空泛湊字。
+- 扣分規則：
+* 內容空泛、同義反覆（前後段反覆換句話說湊字數）：扣 5 分。
+* 未解答標題承諾的核心問題：扣 5-10 分。
+
+---
+
+【輸出格式要求】
+
+1. 最終分數：[得分 / 100]（判定：[及格 / 不及格]）
+
+2. 字組使用查核結果：
+- 網頁標題字組：[達成 / 未達標（缺漏說明）]
+- 內文標題字組：[達成 / 未達標（缺漏說明）]
+- 內文字組（特定組數）：[達成 / 未達標（已用 X 組，缺 Y 組）]
+- 內文字組（全部使用）：[完全符合 / 缺漏清單：列出未使用的詞彙]
+
+3. 扣分明細清單（若未扣分填「無」）：
+- 扣分項目：[例如：字組缺漏 / 超長句 / 關鍵字硬塞 / 內容同義反覆]
+- 扣除分數：[-X 分]
+- 原文節錄：[指出問題所在的句子]
+- 具體問題說明：[簡述扣分原因]
+
+4. 下次改寫提示（未達標時填寫，供直接貼給 AI 修正）：
+- 需強制補入的指定字組：[列出此次遺漏的字組]
+- 需修正的語句結構：[簡述需拆句或理順的地方]
+
+---
+
+【指定關鍵字組清單】
+
+【網頁標題字組：8 個標題，每個至少使用 3 組以上】
+${list(1)}
+
+【內文標題字組：至少 5 個標題，合計使用 6 組以上】
+${list(2)}
+
+【內文字組：使用 6 組以上】
+${list(3)}
+
+【內文字組：全部使用】
+${list(4)}
+
+---
+
+【待評分文章】
+
+${articleRaw}`;
+
+    showPrompt(prompt, '🏅 評分指令（已自動複製，可直接貼到其他地方）');
+}
+
+// ===== 抓文章主題：字組資料中第一個區塊標題【】之前的那一行 =====
+function extractTopic(raw, title) {
+    const lines = (raw || '').split('\n').map(s => s.trim()).filter(Boolean);
+    for (const l of lines) {
+        if (l.includes('【')) break;
+        if (/^標題[：:]/.test(l) || /^[-—-]{3,}$/.test(l)) continue;
+        if (title && l === title) continue;
+        return l;
+    }
+    // 備援：從檔案標題「品牌-主題-日期」取中間那段
+    if (title) {
+        const parts = title.split(/[-－_]/);
+        if (parts.length >= 3) return parts[1].trim();
+    }
+    return '';
+}
+
+function copyPrompt() {
+    const text = document.getElementById('promptOutput').value;
+    if (!text) return;
+    copyToClipboard(text, document.getElementById('btnCopyPrompt'));
+}
+
+// ===== 共用：複製到剪貼簿（含備援）=====
+function copyToClipboard(text, btn) {
+    const done = () => {
+        if (!btn) return;
+        const original = btn.dataset.label || btn.innerText;
+        btn.dataset.label = original;
+        btn.innerText = '✅ 已複製';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.innerText = original; btn.classList.remove('copied'); }, 1500);
+    };
+    const fallback = () => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); }
+        catch (e) { alert('複製失敗，請手動選取文字複製'); }
+        document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done).catch(fallback);
+    } else {
+        fallback();
+    }
 }
 
 function updateStatUI(index, used, total) {
@@ -405,6 +793,7 @@ function updateStatUI(index, used, total) {
         statEl.style.color = pct === 100 ? '#28a745' : (pct >= 70 ? '#e67e22' : '#e74c3c');
     } else {
         percEl.innerText = '—';
+        statEl.style.color = '#333';
     }
 }
 
